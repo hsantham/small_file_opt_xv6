@@ -1,43 +1,15 @@
+
+#include "param.h"
 #include "types.h"
 #include "stat.h"
 #include "user.h"
-
-char buf[512];
-
-void
-cat(int fd)
+#include "fcntl.h"
+int main()
 {
-  int n;
-
-  while((n = read(fd, buf, sizeof(buf))) > 0) {
-    if (write(1, buf, n) != n) {
-      printf(1, "cat: write error\n");
-      exit();
-    }
-  }
-  if(n < 0){
-    printf(1, "cat: read error\n");
-    exit();
-  }
-}
-
-int
-main(int argc, char *argv[])
-{
-  int fd, i;
-
-  if(argc <= 1){
-    cat(0);
-    exit();
-  }
-
-  for(i = 1; i < argc; i++){
-    if((fd = open(argv[i], 0)) < 0){
-      printf(1, "cat: cannot open %s\n", argv[i]);
-      exit();
-    }
-    cat(fd);
+    int fd;
+    fd = open("newfile.txt", O_CREATE|O_RDWR|O_SMALLFILE);
+    printf(1, "write-1-%d\n",write(fd, "aaa", 3));
+    printf(1, "write-2-%d\n",write(fd, "bbb", 3));
     close(fd);
-  }
-  exit();
+    return 0;
 }

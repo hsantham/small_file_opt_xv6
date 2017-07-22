@@ -333,6 +333,7 @@ sys_open(void)
   f->type = FD_INODE;
   f->ip = ip;
   f->off = 0;
+  f->small_file = omode & O_SMALLFILE;
   f->readable = !(omode & O_WRONLY);
   f->writable = (omode & O_WRONLY) || (omode & O_RDWR);
   return fd;

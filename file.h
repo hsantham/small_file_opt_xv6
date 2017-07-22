@@ -1,5 +1,6 @@
 struct file {
   enum { FD_NONE, FD_PIPE, FD_INODE } type;
+  int small_file; // Data is saved within the inode. Supports max file of size 52 bytes.
   int ref; // reference count
   char readable;
   char writable;
@@ -16,6 +17,7 @@ struct inode {
   int ref;            // Reference count
   struct sleeplock lock;
   int flags;          // I_VALID
+  int small_file;
 
   short type;         // copy of disk inode
   short major;

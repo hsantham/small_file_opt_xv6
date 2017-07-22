@@ -254,6 +254,7 @@ iget(uint dev, uint inum)
   ip->inum = inum;
   ip->ref = 1;
   ip->flags = 0;
+  ip->small_file = 1;
   release(&icache.lock);
 
   return ip;
@@ -356,6 +357,11 @@ bmap(struct inode *ip, uint bn)
 {
   uint addr, *a;
   struct buf *bp;
+
+  if(ip->small_file == 1)
+  {
+	return IBLOCK(ip->inum, sb);
+  }
 
   if(bn < NDIRECT){
     if((addr = ip->addrs[bn]) == 0)
