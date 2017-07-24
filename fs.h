@@ -32,6 +32,8 @@ struct dinode {
   short minor;          // Minor device number (T_DEV only)
   short nlink;          // Number of links to inode in file system
   uint size;            // Size of file (bytes)
+  uint small_file;
+  uint padding[15];
   uint addrs[NDIRECT+1];   // Data block addresses
 };
 
@@ -46,6 +48,8 @@ struct dinode {
 
 // Block of free map containing bit for block b
 #define BBLOCK(b, sb) (b/BPB + sb.bmapstart)
+
+unsigned int get_smallfile_offset(unsigned int inum);
 
 // Directory is a file containing a sequence of dirent structures.
 #define DIRSIZ 14

@@ -298,7 +298,7 @@ sys_open(void)
   begin_op();
 
   if(omode & O_CREATE){
-    if(omode & T_SMALLFILE) {
+    if(omode & O_SMALLFILE) {
       ip = create(path, T_SMALLFILE, 0, 0);
     } else {
       ip = create(path, T_FILE, 0, 0);
@@ -332,7 +332,7 @@ sys_open(void)
 
   f->type = FD_INODE;
   f->ip = ip;
-  f->off = 0;
+  f->off = 0; //(omode & O_SMALLFILE) ? get_smallfile_offset(ip->inum) : 0;
   f->small_file = omode & O_SMALLFILE;
   f->readable = !(omode & O_WRONLY);
   f->writable = (omode & O_WRONLY) || (omode & O_RDWR);

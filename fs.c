@@ -197,7 +197,9 @@ ialloc(uint dev, short type)
       dip->type = type;
       log_write(bp);   // mark it allocated on the disk
       brelse(bp);
-      return iget(dev, inum);
+	  struct inode *in = iget(dev, inum);
+	  in->small_file = (type == T_SMALLFILE);
+      return in;
     }
     brelse(bp);
   }
@@ -218,6 +220,7 @@ iupdate(struct inode *ip)
   dip->minor = ip->minor;
   dip->nlink = ip->nlink;
   dip->size = ip->size;
+  dip->small_file = ip->small_file;
   memmove(dip->addrs, ip->addrs, sizeof(ip->addrs));
   log_write(bp);
   brelse(bp);
@@ -254,7 +257,6 @@ iget(uint dev, uint inum)
   ip->inum = inum;
   ip->ref = 1;
   ip->flags = 0;
-  ip->small_file = 1;
   release(&icache.lock);
 
   return ip;
@@ -292,6 +294,7 @@ ilock(struct inode *ip)
     ip->minor = dip->minor;
     ip->nlink = dip->nlink;
     ip->size = dip->size;
+    ip->small_file = dip->small_file;
     memmove(ip->addrs, dip->addrs, sizeof(ip->addrs));
     brelse(bp);
     ip->flags |= I_VALID;
@@ -431,6 +434,7 @@ stati(struct inode *ip, struct stat *st)
   st->type = ip->type;
   st->nlink = ip->nlink;
   st->size = ip->size;
+  st->small_file = ip->small_file;
 }
 
 //PAGEBREAK!
@@ -445,6 +449,19 @@ readi(struct inode *ip, char *dst, uint off, uint n)
     if(ip->major < 0 || ip->major >= NDEV || !devsw[ip->major].read)
       return -1;
     return devsw[ip->major].read(ip, dst, n);
+  }
+
+  if(ip->small_file == 1)
+  {
+    unsigned int max_filesize = sizeof(unsigned int) * (NDIRECT+1);
+
+    if(off > ip->size || off + n < off)
+      return -1;
+	if(off + n > max_filesize)
+	  return -1;
+	
+	memmove(dst, ip->addrs + off, n);
+	return n;
   }
 
   if(off > ip->size || off + n < off)
@@ -480,6 +497,25 @@ writei(struct inode *ip, char *src, uint off, uint n)
     if(ip->major < 0 || ip->major >= NDEV || !devsw[ip->major].write)
       return -1;
     return devsw[ip->major].write(ip, src, n);
+  }
+
+  if(ip->small_file == 1)
+  {
+    unsigned int max_filesize = sizeof(unsigned int) * (NDIRECT+1);
+
+    if(off > ip->size || off + n < off)
+      return -1;
+
+	if(off >= max_filesize)
+	  return -1;
+
+	int bytesToCopy = min(max_filesize - off, n);
+	memmove(ip->addrs + off, src, bytesToCopy);
+	off = off + bytesToCopy;
+
+	ip->size = off;
+	iupdate(ip);
+	return n;
   }
 
   if(off > ip->size || off + n < off)
@@ -659,4 +695,11 @@ struct inode*
 nameiparent(char *path, char *name)
 {
   return namex(path, 1, name);
+}
+
+unsigned int get_smallfile_offset(unsigned int inum)
+{
+    int offset = sizeof(struct dinode) * (inum % IPB);
+    offset += (int) (&(((struct dinode *)0)->addrs));
+    return offset;
 }
